@@ -4,9 +4,10 @@ import "./App.css";
 
 function App() {
   const [posts, setPosts] = useState([]);
-  const [newPostText, setNewPostText] = useState(""); // 新しい投稿のテキストを保存する箱
+  const [newPostText, setNewPostText] = useState("");
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editingText, setEditingText] = useState("");
 
-  // 投稿一覧を取得する関数
   const fetchPosts = () => {
     axios
       .get("http://127.0.0.1:8000/api/posts/")
@@ -18,32 +19,57 @@ function App() {
       });
   };
 
-  // 最初に一度だけ投稿一覧を取得する
   useEffect(() => {
     fetchPosts();
   }, []);
 
-  // フォームが送信された時の処理
   const handleSubmit = (e) => {
-    e.preventDefault(); // フォームのデフォルトの送信動作を防ぐ
+    e.preventDefault();
     axios
       .post("http://127.0.0.1:8000/api/posts/", { text: newPostText })
       .then((response) => {
-        console.log("投稿成功:", response.data);
-        setNewPostText(""); // 入力欄を空にする
-        fetchPosts(); // 投稿一覧を再取得して画面を更新
+        setNewPostText("");
+        fetchPosts();
       })
       .catch((error) => {
         console.error("投稿中にエラーが発生しました！", error);
       });
   };
 
+  const handleDelete = (id) => {
+    axios
+      .delete(`http://127.0.0.1:8000/api/posts/${id}/`)
+      .then((response) => {
+        fetchPosts();
+      })
+      .catch((error) => {
+        console.error("削除中にエラーが発生しました！", error);
+      });
+  };
+
+  const handleEditClick = (post) => {
+    setEditingPostId(post.id);
+    setEditingText(post.text);
+  };
+
+  // 「保存」ボタンが押された時の処理
+  const handleUpdateSubmit = (id) => {
+    axios
+      .put(`http://127.0.0.1:8000/api/posts/${id}/`, { text: editingText })
+      .then((response) => {
+        setEditingPostId(null); // 編集モードを終了
+        setEditingText("");
+        fetchPosts(); // 投稿一覧を再取得
+      })
+      .catch((error) => {
+        console.error("更新中にエラーが発生しました！", error);
+      });
+  };
   return (
     <div className="App">
       <header className="App-header">
         <h1>投稿一覧 (from Django API)</h1>
 
-        {/* 新しい投稿フォーム */}
         <form onSubmit={handleSubmit}>
           <input
             type="text"
@@ -54,10 +80,43 @@ function App() {
           <button type="submit">投稿</button>
         </form>
 
-        {/* 投稿一覧 */}
         <ul>
           {posts.map((post) => (
-            <li key={post.id}>{post.text}</li>
+            <li key={post.id}>
+              {editingPostId === post.id ? (
+                // --- ↓↓↓ 編集モードの時の表示 ↓↓↓ ---
+                <div>
+                  <input
+                    type="text"
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                  />
+                  <button onClick={() => handleUpdateSubmit(post.id)}>
+                    保存
+                  </button>
+                  <button onClick={() => setEditingPostId(null)}>
+                    キャンセル
+                  </button>
+                </div>
+              ) : (
+                // --- ↓↓↓ 通常モードの時の表示 ↓↓↓ ---
+                <div>
+                  {post.text}
+                  <button
+                    onClick={() => handleEditClick(post)}
+                    style={{ marginLeft: "10px" }}
+                  >
+                    編集
+                  </button>
+                  <button
+                    onClick={() => handleDelete(post.id)}
+                    style={{ marginLeft: "10px" }}
+                  >
+                    削除
+                  </button>
+                </div>
+              )}
+            </li>
           ))}
         </ul>
       </header>
