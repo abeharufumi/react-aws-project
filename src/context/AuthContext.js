@@ -1,28 +1,39 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useState, useContext, useEffect } from "react";
+import axios from "axios";
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  // ここに、ログインしているユーザーの情報を保存します
-  const [user, setUser] = useState(null);
+  const [authToken, setAuthToken] = useState(() =>
+    localStorage.getItem("authToken")
+  );
+  const [user, setUser] = useState(null); // 今後のためにユーザー情報も用意
 
-  // ログイン時にユーザー情報を設定する関数 (後で実装)
-  const login = (userData) => {
-    setUser(userData);
+  useEffect(() => {
+    if (authToken) {
+      axios.defaults.headers.common["Authorization"] = `Token ${authToken}`;
+      localStorage.setItem("authToken", authToken);
+    } else {
+      delete axios.defaults.headers.common["Authorization"];
+      localStorage.removeItem("authToken");
+    }
+  }, [authToken]);
+
+  const login = (data) => {
+    setAuthToken(data.key); // dj-rest-authは'key'という名前でトークンを返します
+    // setUser(data.user); // ユーザー情報の取得は次のステップで
   };
 
-  // ログアウト時にユーザー情報をリセットする関数 (後で実装)
   const logout = () => {
+    setAuthToken(null);
     setUser(null);
   };
 
-  // valueとして、子コンポーネントに渡したい情報や関数を指定
-  const value = { user, login, logout };
+  const value = { user, authToken, login, logout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// 他のコンポーネントから簡単にContextを呼び出すためのカスタムフック
 export const useAuth = () => {
   return useContext(AuthContext);
 };
