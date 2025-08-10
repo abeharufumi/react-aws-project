@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext"; // useAuthをインポート
 
 function HomePage() {
   const [posts, setPosts] = useState([]);
   const [newPostText, setNewPostText] = useState("");
   const [editingPostId, setEditingPostId] = useState(null);
   const [editingText, setEditingText] = useState("");
+  const { authToken } = useAuth(); // authTokenをContextから取得
 
   const fetchPosts = () => {
     axios
@@ -67,15 +69,17 @@ function HomePage() {
   return (
     <div>
       <h1>投稿一覧 (from Django API)</h1>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={newPostText}
-          onChange={(e) => setNewPostText(e.target.value)}
-          placeholder="新しい投稿"
-        />
-        <button type="submit">投稿</button>
-      </form>
+      {authToken && (
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            value={newPostText}
+            onChange={(e) => setNewPostText(e.target.value)}
+            placeholder="新しい投稿"
+          />
+          <button type="submit">投稿</button>
+        </form>
+      )}
       <ul>
         {posts.map((post) => (
           <li key={post.id}>
@@ -96,18 +100,22 @@ function HomePage() {
             ) : (
               <div>
                 {post.text}
-                <button
-                  onClick={() => handleEditClick(post)}
-                  style={{ marginLeft: "10px" }}
-                >
-                  編集
-                </button>
-                <button
-                  onClick={() => handleDelete(post.id)}
-                  style={{ marginLeft: "10px" }}
-                >
-                  削除
-                </button>
+                {authToken && (
+                  <>
+                    <button
+                      onClick={() => handleEditClick(post)}
+                      style={{ marginLeft: "10px" }}
+                    >
+                      編集
+                    </button>
+                    <button
+                      onClick={() => handleDelete(post.id)}
+                      style={{ marginLeft: "10px" }}
+                    >
+                      削除
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </li>
