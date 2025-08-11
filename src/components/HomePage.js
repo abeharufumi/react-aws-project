@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext"; // useAuthをインポート
+import { useStripe } from "@stripe/react-stripe-js";
 
 function HomePage() {
   const [posts, setPosts] = useState([]);
   const [newPostText, setNewPostText] = useState("");
   const [editingPostId, setEditingPostId] = useState(null);
   const [editingText, setEditingText] = useState("");
-  const { authToken } = useAuth(); // authTokenをContextから取得
+  const { authToken } = useAuth();
+  const stripe = useStripe(); // ← 2. stripeフックを呼び出す
 
   const fetchPosts = () => {
     axios
@@ -66,19 +68,47 @@ function HomePage() {
       });
   };
 
+  // --- ↓↓↓ 購読ボタンが押された時の関数を追記 ↓↓↓ ---
+  const handleSubscribe = async () => {
+    try {
+      // 1. バックエンドにリクエストを送り、Checkout Session IDを取得
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/payments/create-checkout-session/"
+      );
+      const { id: sessionId } = response.data;
+
+      // 2. 取得したIDを使って、Stripeの決済ページにリダイレクト
+      const { error } = await stripe.redirectToCheckout({
+        sessionId,
+      });
+
+      if (error) {
+        console.error("Stripeリダイレクトエラー:", error);
+      }
+    } catch (error) {
+      console.error("購読処理エラー:", error);
+    }
+  };
+
   return (
     <div>
       <h1>投稿一覧 (from Django API)</h1>
       {authToken && (
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            value={newPostText}
-            onChange={(e) => setNewPostText(e.target.value)}
-            placeholder="新しい投稿"
-          />
-          <button type="submit">投稿</button>
-        </form>
+        <>
+          <div>
+            <h2>クリエイターを購読する</h2>
+            <button onClick={handleSubscribe}>月額500円で購読</button>
+          </div>
+          <form onSubmit={handleSubmit}>
+            <input
+              type="text"
+              value={newPostText}
+              onChange={(e) => setNewPostText(e.target.value)}
+              placeholder="新しい投稿"
+            />
+            <button type="submit">投稿</button>
+          </form>
+        </>
       )}
       <ul>
         {posts.map((post) => (
