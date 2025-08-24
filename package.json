@@ -28,6 +28,7 @@
       "react-app/jest"
     ]
   },
+  "proxy": "https://www.my-site-silver.xyz",
   "browserslist": {
     "production": [
       ">0.2%",
